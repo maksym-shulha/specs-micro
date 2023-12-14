@@ -1,40 +1,26 @@
-import os
-import django
 import requests
-import json
 from bs4 import BeautifulSoup
 
+from specs_micro.configs.db_config import save_to_mongodb, find_by_url
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "specs_micro.settings")
-django.setup()
-
-from template_specs.models import Producer, Series, Cpu, Gpu, Category, DisplaySize
 
 headers = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome\
         /102.0.5042.108 Safari/537.36'}
 
-param_mapping = {
-    'Producer': Producer,
-    'Series': Series,
-    'Cpu': Cpu,
-    'Gpu': Gpu,
-    'Category': Category,
-    'DisplaySize': DisplaySize,
-}
 
-
-def get_items_specs(**kwargs):
-    full_search_url = make_search_url(**kwargs)
+def get_items_specs(*args):
+    full_search_url = make_search_url(*args)
     items_url_list = get_items_urls(full_search_url)
+    producer = ''
+    series = ''
+    model = ''
 
-    with open('specs_list.json', 'w') as f:
-        model = ''
-        specs = {}
-
-        for item_url in items_url_list:
+    for item_url in items_url_list:
+        if not find_by_url(item_url):
             response = requests.get(item_url, headers=headers)
             soup = BeautifulSoup(response.content, 'html.parser')
+            price = int(soup.find('span', {'itemprop': 'price'})['content'])
             all_specs = soup.find('div', {'class': 'br-pr-chr'})
             items = {}
 
@@ -49,22 +35,27 @@ def get_items_specs(**kwargs):
 
                     if name == 'Модель':
                         model = value
+                    elif name == 'Серія (модельний ряд)':
+                        series = value
+                    elif name == 'Виробник':
+                        producer = value
 
                     parameters[name] = value
 
                 items[category_name] = parameters
 
-            specs[model] = items
-        f.write(json.dumps(specs, ensure_ascii=False, indent=2))
+
+            save_to_mongodb({'producer': producer,
+                             'series': series,
+                             'model': model,
+                             'price': price,
+                             'url': item_url,
+                             'specs': items})
 
 
-def make_search_url(**kwargs):
+def make_search_url(*args):
     base_url = 'https://brain.com.ua/ukr/category/Noutbuky-c1191/filter='
-    search_params_lst = []
-
-    for key, value in kwargs.items():
-        filter_code = param_mapping[key].objects.get(name=value).code
-        search_params_lst.append(filter_code)
+    search_params_lst = [item for item in args]
 
     query_params = ','.join(search_params_lst)
     full_search_url = base_url + query_params + '/'
@@ -88,4 +79,4 @@ def get_items_urls(url):
     return urls_list
 
 
-get_items_specs(Producer='HP', Series='HP Zbook')
+get_items_specs('9717-86045462600', '199-g36543')
