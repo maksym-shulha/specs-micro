@@ -1,3 +1,5 @@
+import json
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -8,11 +10,14 @@ headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KH
            Chrome/102.0.5042.108 Safari/537.36'}
 
 
-def get_items_specs(query):
-    items_url_list = get_items_urls(query)
+def get_items_specs(filter_params):
+    items_url_list = get_items_urls(filter_params)
     producer = ''
     series = ''
     model = ''
+    cpu = ''
+    gpu = ''
+    displaysize = ''
 
     for item_url in items_url_list:
         if not find_by_url(item_url):
@@ -37,6 +42,12 @@ def get_items_specs(query):
                         series = value
                     elif name == 'Виробник':
                         producer = value
+                    elif name == 'Процесор':
+                        cpu = value
+                    elif name == 'Відеокарта':
+                        gpu = value
+                    elif name == 'Діагональ дисплея':
+                        displaysize = value
 
                     parameters[name] = value
 
@@ -44,6 +55,9 @@ def get_items_specs(query):
 
             save_to_mongodb({'producer': producer,
                              'series': series,
+                             'cpu': cpu,
+                             'gpu': gpu,
+                             'displaysize': displaysize,
                              'model': model,
                              'price': price,
                              'url': item_url,
@@ -52,12 +66,19 @@ def get_items_specs(query):
     return items_url_list
 
 
-def get_items_urls(query):
+def get_items_urls(filter_params):
+    brain_codes = []
+
+    with open('brain_codes.json', 'r') as f:
+        mapping = json.load(f)
+        for item in filter_params.values():
+            brain_codes.append(mapping[item.lower()])
+
+    query = ','.join(brain_codes)
     full_urls_list = []
-    scrape = True
     page_num = 1
 
-    while scrape is True:
+    while True:
         full_search_url = 'https://brain.com.ua/ukr/category/Noutbuky-c1191/filter=' + query + f';page={page_num}/'
         urls_list = []
 
@@ -67,7 +88,6 @@ def get_items_urls(query):
             if page_num == 1 and response.is_redirect:
                 return []
             elif page_num != 1 and response.is_redirect:
-                scrape = False
                 break
 
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -80,7 +100,6 @@ def get_items_urls(query):
                 if buy_link is not None:
                     urls_list.append(f'https://brain.com.ua{item_url}')
                 else:
-                    scrape = False
                     break
 
         except requests.exceptions.RequestException as e:
