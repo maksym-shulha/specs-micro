@@ -68,6 +68,7 @@ def get_items_specs(filter_params):
 
 def get_items_urls(filter_params):
     brain_codes = []
+    scrape = True
 
     with open('brain_codes.json', 'r') as f:
         mapping = json.load(f)
@@ -78,7 +79,7 @@ def get_items_urls(filter_params):
     full_urls_list = []
     page_num = 1
 
-    while True:
+    while scrape is True:
         full_search_url = 'https://brain.com.ua/ukr/category/Noutbuky-c1191/filter=' + query + f';page={page_num}/'
         urls_list = []
 
@@ -88,6 +89,7 @@ def get_items_urls(filter_params):
             if page_num == 1 and response.is_redirect:
                 return []
             elif page_num != 1 and response.is_redirect:
+                scrape = False
                 break
 
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -100,6 +102,7 @@ def get_items_urls(filter_params):
                 if buy_link is not None:
                     urls_list.append(f'https://brain.com.ua{item_url}')
                 else:
+                    scrape = False
                     break
 
         except requests.exceptions.RequestException as e:
