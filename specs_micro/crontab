@@ -1,0 +1,1 @@
+0 0 * * * /Users/maks/Documents/Softserve_Academy/Internship/specs-micro/venv/bin/python3 /Users/maks/Documents/Softserve_Academy/Internship/specs-micro/specs_micro/update_price.py

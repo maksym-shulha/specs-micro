@@ -5,7 +5,6 @@ def individual_serial(item) -> dict:
         'series': item['series'],
         'model': item['model'],
         'price': item['price'],
-        'url': item['url'],
         'specs': item['specs']
     }
 
