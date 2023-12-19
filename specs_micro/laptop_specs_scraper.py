@@ -1,4 +1,5 @@
 import json
+import logging
 
 import requests
 from bs4 import BeautifulSoup
@@ -6,11 +7,22 @@ from bs4 import BeautifulSoup
 from configs.db_config import save_to_mongodb, find_by_url
 
 
+logging.basicConfig(level=logging.ERROR,
+                    filename='log_files/specs_scraper.log',
+                    filemode='a',
+                    format='{asctime} - {name} - {levelname} - {message}',
+                    style='{'
+                    )
+
 headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) \
            Chrome/102.0.5042.108 Safari/537.36'}
 
 
-def get_items_specs(filter_params):
+def get_items_specs(filter_params: list) -> list:
+    """
+    Retrieves specifications of items from the 'brain.com.ua' website,
+    stores them in MongoDB, and returns a list of URLs for which specifications have been obtained.
+    """
     items_url_list = get_items_urls(filter_params)
     producer = ''
     series = ''
@@ -20,60 +32,73 @@ def get_items_specs(filter_params):
     displaysize = ''
 
     for item_url in items_url_list:
-        if not find_by_url(item_url):
-            response = requests.get(item_url, headers=headers)
-            soup = BeautifulSoup(response.content, 'html.parser')
-            price = int(soup.find('span', {'itemprop': 'price'})['content'])
-            all_specs = soup.find('div', {'class': 'br-pr-chr'})
-            items = {}
+        try:
+            if not find_by_url(item_url):
+                response = requests.get(item_url, headers=headers)
+                soup = BeautifulSoup(response.content, 'html.parser')
+                price = int(soup.find('span', {'itemprop': 'price'})['content'])
+                all_specs = soup.find('div', {'class': 'br-pr-chr'})
+                items = {}
 
-            for category in all_specs.find_all('div', {'class': 'br-pr-chr-item'}):
-                category_name = category.find('p').text.strip()
-                parameters = {}
+                for category in all_specs.find_all('div', {'class': 'br-pr-chr-item'}):
+                    category_name = category.find('p').text.strip()
+                    parameters = {}
 
-                for div in category.find('div').find_all('div', recursive=False):
-                    characteristics = div.find_all('span')
-                    name = characteristics[0].text.strip()
-                    value = characteristics[1].text.strip()
+                    for div in category.find('div').find_all('div', recursive=False):
+                        characteristics = div.find_all('span')
+                        name = characteristics[0].text.strip()
+                        value = characteristics[1].text.strip()
 
-                    if name == 'Модель':
-                        model = value
-                    elif name == 'Серія (модельний ряд)':
-                        series = value
-                    elif name == 'Виробник':
-                        producer = value
-                    elif name == 'Процесор':
-                        cpu = value
-                    elif name == 'Відеокарта':
-                        gpu = value
-                    elif name == 'Діагональ дисплея':
-                        displaysize = value
+                        if name == 'Модель':
+                            model = value
+                        elif name == 'Серія (модельний ряд)':
+                            series = value
+                        elif name == 'Виробник':
+                            producer = value
+                        elif name == 'Процесор':
+                            cpu = value
+                        elif name == 'Відеокарта':
+                            gpu = value
+                        elif name == 'Діагональ дисплея':
+                            displaysize = value
 
-                    parameters[name] = value
+                        parameters[name] = value
 
-                items[category_name] = parameters
+                    items[category_name] = parameters
 
-            save_to_mongodb({'producer': producer,
-                             'series': series,
-                             'cpu': cpu,
-                             'gpu': gpu,
-                             'displaysize': displaysize,
-                             'model': model,
-                             'price': price,
-                             'url': item_url,
-                             'specs': items})
+                save_to_mongodb({'producer': producer,
+                                 'series': series,
+                                 'cpu': cpu,
+                                 'gpu': gpu,
+                                 'displaysize': float(displaysize.strip('"')),
+                                 'model': model,
+                                 'price': price,
+                                 'url': item_url,
+                                 'specs': items})
+
+        except requests.RequestException as e:
+            logging.error(f"Request failed for URL {item_url}: {e}")
 
     return items_url_list
 
 
-def get_items_urls(filter_params):
+def get_items_urls(filter_params: list) -> list:
+    """
+    Retrieves a list of item URLs from the 'brain.com.ua' website based on
+    the provided filter parameters and returns a list of URLs for matching items.
+    """
     brain_codes = []
     scrape = True
 
-    with open('brain_codes.json', 'r') as f:
-        mapping = json.load(f)
-        for item in filter_params.values():
-            brain_codes.append(mapping[item.lower()])
+    try:
+        with open('brain_codes.json', 'r') as f:
+            mapping = json.load(f)
+            for item in filter_params:
+                brain_codes.append(mapping[item.lower()])
+
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logging.error(f"Error reading 'brain_codes.json': {e}")
+        return []
 
     query = ','.join(brain_codes)
     full_urls_list = []
@@ -106,7 +131,7 @@ def get_items_urls(filter_params):
                     break
 
         except requests.exceptions.RequestException as e:
-            print(f"Request failed: {e}")
+            logging.error(f"Request failed: {e}")
 
         if urls_list:
             full_urls_list.extend(urls_list)

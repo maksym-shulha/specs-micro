@@ -1,7 +1,16 @@
-import requests
 import json
+import logging
+import requests
+
 from bs4 import BeautifulSoup
 
+
+logging.basicConfig(level=logging.ERROR,
+                    filename='log_files/specs_scraper.log',
+                    filemode='a',
+                    format='{asctime} - {name} - {levelname} - {message}',
+                    style='{'
+                    )
 
 url = 'https://brain.com.ua/ukr/category/Noutbuky-c1191/'
 
@@ -36,7 +45,7 @@ def scrape_search_params():
                     brain_codes_mapping[item_name] = item_code
 
         except Exception as e:
-            pass
+            logging.error(f"Error while scraping search parameters: {e}")
 
     with open('brain_codes.json', 'w') as f:
         json.dump(brain_codes_mapping, f)
