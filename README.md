@@ -1,5 +1,7 @@
 # Laptop Specifications Microservice
 
+[![Lint](https://github.com/maksym-shulha/specs-micro/workflows/Lint/badge.svg)](https://github.com/maksym-shulha/specs-micro/actions?query=workflow%3ALint)
+
 This repository contains a FastAPI application for retrieving and updating laptop specifications. It consists of the following parts:
 
 ## 1. Endpoints:

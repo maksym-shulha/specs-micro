@@ -16,6 +16,6 @@ jobs:
       - name: Lint
         uses: py-actions/flake8@v2
         with:
-          path: "snort3_monitor"
+          path: "specs_micro"
           ignore: "F401,F403,W292,E402"
           max-line-length: "120"
