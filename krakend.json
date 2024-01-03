@@ -1,0 +1,36 @@
+{
+    "$schema": "https://www.krakend.io/schema/v2.5/krakend.json",
+    "version": 3,
+    "endpoints": [
+        {
+            "endpoint": "/laptops/{id}",
+            "method": "GET",
+            "output_encoding": "json",
+            "backend": [
+                {
+                    "url_pattern": "/api/items/{id}",
+                    "host": ["http://specs_micro:8001"]
+                }
+
+            ]
+        },
+        {
+            "endpoint": "/laptops",
+            "input_query_strings": [
+                "producer",
+                "series",
+                "cpu",
+                "gpu",
+                "displaysize",
+                "page"
+            ],
+            "method": "GET",
+            "backend": [
+                {
+                    "url_pattern": "/api/items",
+                    "host": ["http://specs_micro:8001"]
+                }
+            ]
+        }
+    ]
+}
