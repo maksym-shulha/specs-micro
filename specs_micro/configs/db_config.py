@@ -1,13 +1,15 @@
-from pymongo import MongoClient
-
-mongo_client = MongoClient('mongodb://localhost:27017/')
-db = mongo_client['laptop_specs']
-collection = db['laptops']
+from motor.motor_asyncio import AsyncIOMotorClient
 
 
-def save_to_mongodb(data):
-    collection.insert_one(data)
+mongo_client = AsyncIOMotorClient('mongodb://mongodb:27017/')
+db = mongo_client['laptops']
+collection = db['specs']
 
 
-def find_by_url(url):
-    return collection.find_one({'url': url})
+async def save_to_mongodb(data):
+    await collection.insert_one(data)
+
+
+async def find_by_url(url):
+    document = await collection.find_one({'url': url})
+    return document

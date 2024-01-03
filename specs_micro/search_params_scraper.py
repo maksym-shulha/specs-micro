@@ -28,6 +28,16 @@ param_mapping = {
 
 
 def scrape_search_params():
+    """
+    Scrapes search parameters from a specified URL and saves the mapping to a JSON file.
+
+    Raises:
+        Exception: If there is an error while scraping and processing the search parameters.
+
+    The function sends an HTTP request to the specified URL, extracts search parameters
+    from the HTML content, and creates a mapping between item names and their corresponding codes.
+    This mapping is then saved to a JSON file named 'brain_codes.json'.
+    """
     response = requests.get(url, headers=headers)
     soup = BeautifulSoup(response.content, 'html.parser')
     filter_wrapper_div = soup.find("div", {"class": "filters-wrapper"})
