@@ -5,22 +5,9 @@ from fastapi import APIRouter, Query, HTTPException, Request
 
 from configs.db_config import collection
 from laptop_specs_scraper import get_items_specs
-from pydantic import BaseModel, HttpUrl
 
 
 router = APIRouter()
-
-
-class LaptopSpecs(BaseModel):
-    producer: str
-    series: str
-    cpu: str
-    gpu: str
-    displaysize: float
-    model: str
-    price: int
-    url: HttpUrl
-    specs: dict
 
 
 @router.get("/api/items/{item_id}")
@@ -41,6 +28,31 @@ async def read_item(item_id: str):
             return item
         else:
             raise HTTPException(status_code=404, detail="Item not found")
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid item ID format: {e}")
+
+
+@router.get("/api/selected")
+async def read_items(ids: str = Query(..., description="List of item IDs")):
+    """
+    Retrieve item details by multiple item IDs.
+    """
+    id_list = [id.strip('"') for id in ids.strip("[]").replace(" ", "").split(",")]
+    print(id_list)
+    try:
+        object_ids = [ObjectId(id) for id in id_list]
+
+        items = await collection.find({'_id': {'$in': object_ids}}).to_list(length=len(object_ids))
+
+        formatted_items = []
+        for item in items:
+            item['_id'] = str(item['_id'])
+            formatted_items.append(item)
+
+        return formatted_items
+
     except HTTPException as e:
         raise e
     except Exception as e:
