@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+  mongodb:
+    image: mongodb/mongodb-community-server:6.0-ubi8
+    container_name: lappy_db
+    ports:
+      - '27018:27017'
+    networks:
+      - 'lappy_network'
+
+  specs_micro:
+    build: specs-micro/
+    container_name: lappy_specs
+    ports:
+      - '8001:8001'
+    networks:
+      - 'lappy_network'
+    depends_on:
+      - mongodb
+
+  mongorestore:
+    build: mongorestore/
+    command: ["mongorestore --host mongodb --port 27017 --db laptops --collection specs /laptops.bson"]
+    depends_on:
+      - mongodb
+    networks:
+      - 'lappy_network'
+    entrypoint: ["/bin/sh", "-c"]
+    restart: "no"
+
+  krakend:
+    build: krakend/
+    container_name: krakend
+    ports:
+      - '8080:8080'
+    command: ["run", "-d", "-c", "/etc/krakend/krakend.json"]
+    networks:
+      - 'lappy_network'
+    depends_on:
+      - mongodb
+      - specs_micro
+
+networks:
+  lappy_network:
+    driver: bridge

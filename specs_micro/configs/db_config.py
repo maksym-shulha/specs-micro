@@ -2,7 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 
 mongo_client = AsyncIOMotorClient('mongodb://mongodb:27017/')
-db = mongo_client['laptops']
+db = mongo_client['lappy']
 collection = db['specs']
 
 
