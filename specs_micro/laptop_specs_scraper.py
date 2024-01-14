@@ -93,10 +93,10 @@ async def get_items_specs(filter_params=None):
                                            'url': item_url,
                                            'specs': items})
 
-                    logging.info(f"Laptop {series}, {model} was written to db")
+                    logging.info(f'Laptop {series}, {model} was written to db')
 
             except httpx.RequestError as e:
-                logging.error(f"Request failed for URL {item_url}: {e}")
+                logging.error(f'Request failed for URL {item_url}: {e}')
 
     return items_url_list
 
@@ -122,7 +122,7 @@ async def get_items_urls(filter_params):
                     brain_codes.append(mapping[item.lower()])
 
         except (FileNotFoundError, json.JSONDecodeError) as e:
-            logging.error(f"Error reading 'brain_codes.json': {e}")
+            logging.error(f'Error reading "brain_codes.json": {e}')
             return []
 
     query = ','.join(brain_codes)
@@ -163,15 +163,15 @@ async def get_items_urls(filter_params):
                         break
 
             except httpx.RequestError as e:
-                logging.error(f"Request failed: {e}")
+                logging.error(f'Request failed: {e}')
 
             if urls_list:
                 full_urls_list.extend(urls_list)
                 page_num += 1
 
-    logging.info(f"Urls list was created.")
+    logging.info('Urls list was created.')
     return full_urls_list
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.run(get_items_specs())

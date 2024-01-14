@@ -32,7 +32,7 @@ async def update_prices():
             await collection.delete_one({'_id': laptop['_id']})
         elif updated_price != laptop['price']:
             await collection.update_one({'_id': laptop['_id']}, {'$set': {'price': updated_price}})
-            logging.info(f"Updated price for {laptop['model']} to {updated_price}")
+            logging.info(f'Updated price for {laptop["model"]} to {updated_price}')
     logging.info('Price updating completed')
 
 
@@ -77,7 +77,7 @@ async def scrape_prices():
                         break
 
             except httpx.RequestError as e:
-                logging.error(f"Request failed: {e}")
+                logging.error(f'Request failed: {e}')
 
             if result:
                 full_result.update(result)
@@ -86,5 +86,5 @@ async def scrape_prices():
     return full_result
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.run(update_prices())

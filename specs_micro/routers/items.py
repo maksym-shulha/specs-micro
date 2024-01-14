@@ -10,14 +10,14 @@ from laptop_specs_scraper import get_items_specs
 router = APIRouter()
 
 
-@router.get("/api/items/{item_id}")
+@router.get('/api/items/{item_id}')
 async def read_item(item_id: str):
     """
     Retrieve item details by item ID.
     """
     try:
         if not ObjectId.is_valid(item_id):
-            raise HTTPException(status_code=400, detail="Invalid ObjectId format")
+            raise HTTPException(status_code=400, detail='Invalid ObjectId format')
 
         obj_id = ObjectId(item_id)
 
@@ -27,19 +27,19 @@ async def read_item(item_id: str):
             item['_id'] = str(item['_id'])
             return item
         else:
-            raise HTTPException(status_code=404, detail="Item not found")
+            raise HTTPException(status_code=404, detail='Item not found')
     except HTTPException as e:
         raise e
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid item ID format: {e}")
+        raise HTTPException(status_code=400, detail=f'Invalid item ID format: {e}')
 
 
-@router.get("/api/selected")
+@router.get('/api/selected')
 async def read_items(ids: str = Query(..., description="List of item IDs")):
     """
     Retrieve item details by multiple item IDs.
     """
-    id_list = [id.strip('"') for id in ids.strip("[]").replace(" ", "").split(",")]
+    id_list = [id.strip('"') for id in ids.strip('[]').replace(' ', '').split(',')]
     print(id_list)
     try:
         object_ids = [ObjectId(id) for id in id_list]
@@ -56,17 +56,17 @@ async def read_items(ids: str = Query(..., description="List of item IDs")):
     except HTTPException as e:
         raise e
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid item ID format: {e}")
+        raise HTTPException(status_code=400, detail=f'Invalid item ID format: {e}')
 
 
 @router.get('/api/items', response_model=dict)
 async def get_specs(request: Request,
-                    producer: str = Query(None, description="Producer"),
-                    series: str = Query(None, description="Series"),
-                    cpu: str = Query(None, description="Cpu"),
-                    gpu: str = Query(None, description="Gpu"),
-                    displaysize: str = Query(None, description="Display size"),
-                    page: int = Query(1, alias="page")):
+                    producer: str = Query(None, description='Producer'),
+                    series: str = Query(None, description='Series'),
+                    cpu: str = Query(None, description='Cpu'),
+                    gpu: str = Query(None, description='Gpu'),
+                    displaysize: str = Query(None, description='Display size'),
+                    page: int = Query(1, alias='page')):
     """
     Get items with specifications based on optional filter parameters.
 
@@ -95,31 +95,31 @@ async def get_specs(request: Request,
     filter_params = {}
     if producer:
         values_for_codes.append(producer)
-        filter_params["producer"] = producer
+        filter_params['producer'] = producer
     if series:
         values_for_codes.append(series)
-        filter_params["series"] = series
+        filter_params['series'] = series
     if cpu:
         values_for_codes.append(cpu)
         cpu_pattern = re.escape(cpu) + '.*'
-        filter_params["cpu"] = {'$regex': cpu_pattern}
+        filter_params['cpu'] = {'$regex': cpu_pattern}
     if gpu:
         values_for_codes.append(gpu)
-        filter_params["gpu"] = gpu
+        filter_params['gpu'] = gpu
     if displaysize:
         values_for_codes.append(displaysize)
         if displaysize == '9" - 12.5"':
-            filter_params["displaysize"] = {'$gte': 9, '$lte': 12.9}
+            filter_params['displaysize'] = {'$gte': 9, '$lte': 12.9}
         elif displaysize == '13"':
-            filter_params["displaysize"] = {'$gte': 13, '$lte': 13.9}
+            filter_params['displaysize'] = {'$gte': 13, '$lte': 13.9}
         elif displaysize == '14"':
-            filter_params["displaysize"] = {'$gte': 14, '$lte': 14.9}
+            filter_params['displaysize'] = {'$gte': 14, '$lte': 14.9}
         elif displaysize == '15" - 15.6"':
-            filter_params["displaysize"] = {'$gte': 15, '$lte': 15.9}
+            filter_params['displaysize'] = {'$gte': 15, '$lte': 15.9}
         elif displaysize == '16" - 17"':
-            filter_params["displaysize"] = {'$gte': 16, '$lte': 17.9}
+            filter_params['displaysize'] = {'$gte': 16, '$lte': 17.9}
         elif displaysize == '18.4 " і більше':
-            filter_params["displaysize"] = {'$gte': 18}
+            filter_params['displaysize'] = {'$gte': 18}
 
     total_count = await collection.count_documents(filter_params)
 
@@ -143,11 +143,12 @@ async def get_specs(request: Request,
     prev_page = page - 1 if page > 1 else None
     next_page = page + 1 if skip + page_size < total_count else None
 
-    krakend_base_url = "http://localhost:8080/laptops"
+    krakend_base_url = 'http://localhost:8080/laptops'
     request_url = str(request.url).replace(str(request.base_url) + 'api/items', krakend_base_url)
+    symbol = '&' if '?' in request_url else '?'
 
-    prev_page_url = f"{request_url}{'&' if '?' in request_url else '?'}page={prev_page}" if prev_page else None
-    next_page_url = f"{request_url}{'&' if '?' in request_url else '?'}page={next_page}" if next_page else None
+    prev_page_url = f'{request_url}{symbol}page={prev_page}' if prev_page else None
+    next_page_url = f'{request_url}{symbol}page={next_page}' if next_page else None
 
     return {
         'total': total_count,
