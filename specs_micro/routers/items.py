@@ -129,7 +129,7 @@ async def get_specs(request: Request,
     if not items_list:
         items_urls_lst = await get_items_specs(values_for_codes)
         if not items_urls_lst:
-            return create_empty_response(page, page_size)
+            return create_empty_response()
 
         total_count += await collection.count_documents({'url': {'$in': items_urls_lst}})
         items_cursor = collection.find({'url': {'$in': items_urls_lst}}).skip(skip).limit(page_size)
@@ -143,9 +143,11 @@ async def get_specs(request: Request,
     prev_page = page - 1 if page > 1 else None
     next_page = page + 1 if skip + page_size < total_count else None
 
-    request_url = str(request.url)
-    prev_page_url = f"{request_url}&page={prev_page}" if prev_page else None
-    next_page_url = f"{request_url}&page={next_page}" if next_page else None
+    krakend_base_url = "http://localhost:8080/laptops"
+    request_url = str(request.url).replace(str(request.base_url) + 'api/items', krakend_base_url)
+
+    prev_page_url = f"{request_url}{'&' if '?' in request_url else '?'}page={prev_page}" if prev_page else None
+    next_page_url = f"{request_url}{'&' if '?' in request_url else '?'}page={next_page}" if next_page else None
 
     return {
         'total': total_count,
@@ -159,4 +161,4 @@ async def get_specs(request: Request,
 
 
 def create_empty_response():
-    return "There are no items that satisfy search criteria"
+    return {'response': 'There are no items that satisfy search criteria'}
