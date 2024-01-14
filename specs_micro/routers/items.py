@@ -68,11 +68,25 @@ async def get_specs(request: Request,
                     displaysize: str = Query(None, description="Display size"),
                     page: int = Query(1, alias="page")):
     """
-    Retrieve a list of items based on specified filter parameters.
+    Get items with specifications based on optional filter parameters.
+
+    Parameters:
+    - request (Request): The FastAPI request object.
+    - producer (str, optional): Filter items by producer.
+    - series (str, optional): Filter items by series.
+    - cpu (str, optional): Filter items by CPU.
+    - gpu (str, optional): Filter items by GPU.
+    - displaysize (str, optional): Filter items by display size.
+    - page (int, optional): Page number for paginated results. Default is 1.
+
+    Returns:
+    dict: A dictionary containing the paginated list of items with specifications and pagination details.
 
     Note:
-        If no items are found based on the specified filters, additional items
-        may be fetched using external sources (e.g., `get_items_specs` function).
+    - Pagination is applied with a default page size of 5.
+    - Items with specifications are retrieved based on the provided filter parameters.
+    - Pagination details include total item count, current page, page size, total pages, and URLs for the previous and
+    next pages.
     """
     page_size = 5
     skip = (page - 1) * page_size
@@ -144,13 +158,5 @@ async def get_specs(request: Request,
     }
 
 
-def create_empty_response(page, page_size):
-    return {
-        'total': 0,
-        'page': page,
-        'page_size': page_size,
-        'total_pages': 0,
-        'prev_page': None,
-        'next_page': None,
-        'items': None,
-    }
+def create_empty_response():
+    return "There are no items that satisfy search criteria"

@@ -9,37 +9,39 @@ services:
     networks:
       - 'lappy_network'
 
-  specs_micro:
-    build: specs-micro/
+  specs-micro:
+    build: .
     container_name: lappy_specs
     ports:
       - '8001:8001'
+      - '9001:9001'
     networks:
       - 'lappy_network'
     depends_on:
       - mongodb
+    command: supervisord -c ./supervisord.conf
 
-  mongorestore:
-    build: mongorestore/
-    command: ["mongorestore --host mongodb --port 27017 --db laptops --collection specs /laptops.bson"]
-    depends_on:
-      - mongodb
-    networks:
-      - 'lappy_network'
-    entrypoint: ["/bin/sh", "-c"]
-    restart: "no"
-
-  krakend:
-    build: krakend/
-    container_name: krakend
-    ports:
-      - '8080:8080'
-    command: ["run", "-d", "-c", "/etc/krakend/krakend.json"]
-    networks:
-      - 'lappy_network'
-    depends_on:
-      - mongodb
-      - specs_micro
+#  mongorestore:
+#    build: mongorestore/
+#    command: ["mongorestore --host mongodb --port 27017 --db laptops --collection specs /laptops.bson"]
+#    depends_on:
+#      - mongodb
+#    networks:
+#      - 'lappy_network'
+#    entrypoint: ["/bin/sh", "-c"]
+#    restart: "no"
+#
+#  krakend:
+#    build: krakend/
+#    container_name: krakend
+#    ports:
+#      - '8080:8080'
+#    command: ["run", "-d", "-c", "/etc/krakend/krakend.json"]
+#    networks:
+#      - 'lappy_network'
+#    depends_on:
+#      - mongodb
+#      - specs_micro
 
 networks:
   lappy_network:

@@ -1,5 +1,7 @@
+import asyncio
 import json
 import logging
+import re
 
 import httpx
 from bs4 import BeautifulSoup
@@ -7,8 +9,8 @@ from bs4 import BeautifulSoup
 from configs.db_config import save_to_mongodb, find_by_url
 
 
-logging.basicConfig(level=logging.ERROR,
-                    filename='log_files/specs_scraper.log',
+logging.basicConfig(level=logging.INFO,
+                    filename='/specs_micro/log_files/specs_scraper.log',
                     filemode='a',
                     format='{asctime} - {name} - {levelname} - {message}',
                     style='{'
@@ -18,26 +20,27 @@ headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KH
            Chrome/102.0.5042.108 Safari/537.36'}
 
 
-async def get_items_specs(filter_params: list) -> list:
+async def get_items_specs(filter_params=None):
     """
-    Fetches specifications of laptops based on filter parameters and saves them to MongoDB.
+    Asynchronously scrapes laptop specifications from the Brain.com.ua website and saves them to the MongoDB database.
 
     Args:
-        filter_params (list): List of filter parameters.
+        filter_params (list): A list of filter parameters to narrow down the laptop search.
 
     Returns:
-        list: List of URLs for which specifications were fetched.
+        list: A list of URLs for the laptops processed during the scraping.
     """
     items_url_list = await get_items_urls(filter_params)
-    producer = ''
-    series = ''
-    model = ''
-    cpu = ''
-    gpu = ''
-    displaysize = ''
 
     async with httpx.AsyncClient() as client:
         for item_url in items_url_list:
+            producer = ''
+            series = ''
+            model = ''
+            cpu = ''
+            gpu = ''
+            displaysize = ''
+
             try:
                 if not await find_by_url(item_url):
                     response = await client.get(item_url, headers=headers)
@@ -66,7 +69,14 @@ async def get_items_specs(filter_params: list) -> list:
                             elif name == 'Відеокарта':
                                 gpu = value
                             elif name == 'Діагональ дисплея':
-                                displaysize = value
+                                displaysize = float(value.strip('"'))
+                            elif name == "Об'єм SSD":
+                                match = re.match(r'^(\d+)', value)
+                                int_value = int(match.group(1))
+                                if int_value < 10:
+                                    volume = int_value * 1000
+                                else:
+                                    volume = int_value
 
                             parameters[name] = value
 
@@ -76,11 +86,14 @@ async def get_items_specs(filter_params: list) -> list:
                                            'series': series,
                                            'cpu': cpu,
                                            'gpu': gpu,
-                                           'displaysize': float(displaysize.strip('"')),
+                                           'displaysize': displaysize,
                                            'model': model,
+                                           'volume': volume,
                                            'price': price,
                                            'url': item_url,
                                            'specs': items})
+
+                    logging.info(f"Laptop {series}, {model} was written to db")
 
             except httpx.RequestError as e:
                 logging.error(f"Request failed for URL {item_url}: {e}")
@@ -88,36 +101,43 @@ async def get_items_specs(filter_params: list) -> list:
     return items_url_list
 
 
-async def get_items_urls(filter_params: list) -> list:
+async def get_items_urls(filter_params):
     """
-    Retrieves a list of laptop page URLs based on filter parameters.
+    Asynchronously retrieves a list of laptop URLs based on the provided filter parameters.
 
     Args:
-        filter_params (list): List of filter parameters.
+        filter_params (list): A list of filter parameters to narrow down the laptop search.
 
     Returns:
-        list: List of item URLs.
+        list: A list of URLs for the laptops that match the filter parameters.
     """
     brain_codes = []
     scrape = True
 
-    try:
-        with open('brain_codes.json', 'r') as f:
-            mapping = json.load(f)
-            for item in filter_params:
-                brain_codes.append(mapping[item.lower()])
+    if filter_params:
+        try:
+            with open('/specs_micro/brain_codes.json', 'r') as f:
+                mapping = json.load(f)
+                for item in filter_params:
+                    brain_codes.append(mapping[item.lower()])
 
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        logging.error(f"Error reading 'brain_codes.json': {e}")
-        return []
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logging.error(f"Error reading 'brain_codes.json': {e}")
+            return []
 
     query = ','.join(brain_codes)
+
+    if filter_params:
+        search_url = 'https://brain.com.ua/ukr/category/Noutbuky-c1191/filter=' + query + ';page='
+    else:
+        search_url = 'https://brain.com.ua/ukr/category/Noutbuky-c1191/page='
+
     full_urls_list = []
     page_num = 1
 
     async with httpx.AsyncClient() as client:
         while scrape is True:
-            full_search_url = 'https://brain.com.ua/ukr/category/Noutbuky-c1191/filter=' + query + f';page={page_num}/'
+            full_search_url = f'{search_url}{page_num}/'
             urls_list = []
 
             try:
@@ -136,7 +156,7 @@ async def get_items_urls(filter_params: list) -> list:
                     item_url = product.find('a', {'itemprop': 'url'})['href']
                     buy_link = product.find('a', {'class': 'add'})
 
-                    if buy_link is not None:
+                    if buy_link:
                         urls_list.append(f'https://brain.com.ua{item_url}')
                     else:
                         scrape = False
@@ -149,4 +169,9 @@ async def get_items_urls(filter_params: list) -> list:
                 full_urls_list.extend(urls_list)
                 page_num += 1
 
+    logging.info(f"Urls list was created.")
     return full_urls_list
+
+
+if __name__ == "__main__":
+    asyncio.run(get_items_specs())
